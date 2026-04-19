@@ -1,0 +1,63 @@
+# Node Modules
+
+node_modules/
+
+# Logs
+
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment Variables
+
+.env
+.env.*
+!.env.example
+
+# Build / Output
+
+dist/
+build/
+out/
+
+# OS Files
+
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependency directories (optional for monorepo)
+
+services/*/node_modules/
+
+# Coverage / Testing
+
+coverage/
+.nyc_output/
+
+# Docker
+
+docker-compose.override.yml
+
+# Temporary files
+
+tmp/
+temp/
+
+# Cache
+
+.cache/
+
+# Misc
+
+*.pid
+*.seed
+*.pid.lock

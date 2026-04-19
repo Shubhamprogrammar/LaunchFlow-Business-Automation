@@ -1,0 +1,26 @@
+{
+  "name": "launchflow",
+  "version": "1.0.0",
+  "description": "A platform where companies sign up and manage their internal operations.",
+  "homepage": "https://github.com/Shubhamprogrammar/LaunchFlow-Business-Automation#readme",
+  "bugs": {
+    "url": "https://github.com/Shubhamprogrammar/LaunchFlow-Business-Automation/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shubhamprogrammar/LaunchFlow-Business-Automation.git"
+  },
+  "license": "ISC",
+  "author": "shubham",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.4.1"
+  }
+}
