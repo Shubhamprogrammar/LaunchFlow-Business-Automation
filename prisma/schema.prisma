@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  avatarUrl     String?
+  status        UserStatus     @default(ACTIVE)
+  emailVerified Boolean        @default(false)
+  lastLoginAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  apiKeys       ApiKey[]
+  auditLogs     AuditLog[]     @relation("AuditActor")
+  devices       Device[]
+  uploads       FileUpload[]
+  memberships   Membership[]
+  notifications Notification[]
+  sessions      Session[]
+}
+
+model Workspace {
+  id            String            @id @default(cuid())
+  name          String
+  slug          String            @unique
+  logoUrl       String?
+  plan          WorkspacePlan     @default(FREE)
+  ownerId       String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  apiKeys       ApiKey[]
+  auditLogs     AuditLog[]
+  uploads       FileUpload[]
+  invites       Invite[]
+  jobs          Job[]
+  memberships   Membership[]
+  subscriptions Subscription[]
+  webhooks      WebhookEndpoint[]
+}
+
+model Membership {
+  id          String         @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        MembershipRole @default(MEMBER)
+  createdAt   DateTime       @default(now())
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model Invite {
+  id          String         @id @default(cuid())
+  email       String
+  workspaceId String
+  role        MembershipRole @default(MEMBER)
+  token       String         @unique
+  status      InviteStatus   @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime       @default(now())
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Device {
+  id         String    @id @default(cuid())
+  userId     String
+  deviceName String
+  browser    String?
+  os         String?
+  ipAddress  String?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  workspaceId          String
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  plan                 WorkspacePlan      @default(FREE)
+  status               SubscriptionStatus @default(TRIALING)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  actorId     String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  actor       User?     @relation("AuditActor", fields: [actorId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model WebhookEndpoint {
+  id          String    @id @default(cuid())
+  workspaceId String
+  url         String
+  secret      String
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  name        String
+  keyHash     String    @unique
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model FileUpload {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  fileName    String
+  fileUrl     String
+  mimeType    String?
+  size        Int
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  workspaceId String
+  type        String
+  status      JobStatus @default(PENDING)
+  payload     Json?
+  error       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum WorkspacePlan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  UNPAID
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
