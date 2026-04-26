@@ -33,7 +33,7 @@ app.get("/health", (_, res) => {
   });
 });
 
-app.all("/api/auth", toNodeHandler(auth));
+app.use("/api/auth", toNodeHandler(auth));
 // API Routes
 app.use("/api", routes);
 
