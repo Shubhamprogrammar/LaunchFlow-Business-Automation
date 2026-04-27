@@ -8,6 +8,8 @@ import { auth } from "./lib/auth";
 import routes from "./routes";
 import { notFoundHandler } from "./middleware/notfound.middleware";
 import { errorHandler } from "./middleware/error.middleware";
+import userRoutes from "./modules/user/user.routes";
+import workspaceRoutes from "./modules/workspace/workspace.routes";
 
 const app = express();
 
@@ -35,6 +37,8 @@ app.get("/health", (_, res) => {
 
 app.use("/api/auth", toNodeHandler(auth));
 // API Routes
+app.use("/api/users", userRoutes);
+app.use("/api/workspaces", workspaceRoutes);  
 app.use("/api", routes);
 
 // Middlewares
