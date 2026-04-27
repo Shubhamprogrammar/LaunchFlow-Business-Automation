@@ -1,8 +1,14 @@
 import { Request, Response } from "express";
+import { getCurrentUserService } from "./user.service";
 
-export const getMe = async (req: Request, res: Response) => {
+export const getCurrentUserController = async (
+  req: Request,
+  res: Response
+) => {
+  const user = await getCurrentUserService(req.user.id);
+
   return res.status(200).json({
     success: true,
-    user: req.user,
+    data: user,
   });
 };

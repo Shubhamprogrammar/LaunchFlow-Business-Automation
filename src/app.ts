@@ -10,6 +10,8 @@ import { notFoundHandler } from "./middleware/notfound.middleware";
 import { errorHandler } from "./middleware/error.middleware";
 import userRoutes from "./modules/user/user.routes";
 import workspaceRoutes from "./modules/workspace/workspace.routes";
+import inviteRoutes from "./modules/invite/invite.routes";
+import memberRoutes from "./modules/member/member.routes";
 
 const app = express();
 
@@ -39,6 +41,8 @@ app.use("/api/auth", toNodeHandler(auth));
 // API Routes
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);  
+app.use("/api/invites", inviteRoutes);
+app.use("/api/members", memberRoutes);
 app.use("/api", routes);
 
 // Middlewares

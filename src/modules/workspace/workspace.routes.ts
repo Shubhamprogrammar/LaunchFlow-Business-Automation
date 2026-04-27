@@ -7,7 +7,7 @@ import {
 
 const router = Router();
 
-router.post("/", requireAuth, createWorkspace);
-router.get("/", requireAuth, getMyWorkspaces);
+router.post("/create-workspace", requireAuth, createWorkspace);
+router.get("/my-workspaces", requireAuth, getMyWorkspaces);
 
 export default router;

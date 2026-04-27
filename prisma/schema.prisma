@@ -80,6 +80,7 @@ model User {
 
   memberships   Membership[]
   notifications Notification[]
+  invitesSent   Invite[]       @relation("UserInvitesSent")
   auditLogs     AuditLog[]     @relation("AuditActor")
   apiKeys       ApiKey[]
   uploads       FileUpload[]
@@ -175,6 +176,7 @@ model Invite {
   id          String         @id @default(cuid())
   email       String
   workspaceId String
+  invitedById String
   role        MembershipRole @default(MEMBER)
   token       String         @unique
   status      InviteStatus   @default(PENDING)
@@ -182,8 +184,10 @@ model Invite {
   createdAt   DateTime       @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("UserInvitesSent", fields: [invitedById], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([invitedById])
 }
 
 model Subscription {
