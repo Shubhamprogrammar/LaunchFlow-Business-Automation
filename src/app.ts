@@ -42,7 +42,7 @@ app.use("/api/auth", toNodeHandler(auth));
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);  
 app.use("/api/invites", inviteRoutes);
-app.use("/api/members", memberRoutes);
+app.use("/api", memberRoutes);
 app.use("/api", routes);
 
 // Middlewares
