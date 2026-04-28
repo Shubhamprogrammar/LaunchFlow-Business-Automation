@@ -1,15 +1,17 @@
 import { prisma } from "../../config/prisma";
 import crypto from "crypto";
 import { InviteStatus } from "../../../generated/prisma/enums";
+import { addInviteEmailJob } from "../../jobs/email.jobs";
 
 export const createInviteService = async (
   workspaceId: string,
   email: string,
+  workspaceName: string,
   invitedById: string
 ) => {
   const token = crypto.randomBytes(24).toString("hex");
 
-  return prisma.invite.create({
+  const invite = await prisma.invite.create({
     data: {
       workspaceId,
       email,
@@ -19,6 +21,15 @@ export const createInviteService = async (
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
+
+  // SEND EMAIL VIA BULLMQ (BACKGROUND JOB)
+  await addInviteEmailJob({
+    email,
+    workspaceName,
+    inviteLink: `${process.env.FRONTEND_URL}/invite/${token}`,
+  });
+
+  return invite;
 };
 
 export const acceptInviteService = async (
