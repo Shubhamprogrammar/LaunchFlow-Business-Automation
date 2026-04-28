@@ -22,27 +22,34 @@ export const createInviteService = async (
     },
   });
 
-  // SEND EMAIL VIA BULLMQ (BACKGROUND JOB)
+  // EMAIL (SIDE EFFECT BUT OK HERE BECAUSE IT'S QUEUE-BASED)
   await addInviteEmailJob({
     email,
     workspaceName,
     inviteLink: `${process.env.FRONTEND_URL}/invite/${token}`,
   });
 
-  return invite;
+  // RETURN EVENT DATA (NO NOTIFICATIONS HERE)
+  return {
+    invite,
+    event: {
+      type: "INVITE_CREATED",
+      userId: invitedById,
+      email,
+      workspaceName,
+      workspaceId,
+    },
+  };
 };
 
 export const acceptInviteService = async (
   token: string,
   userId: string
 ) => {
-  return prisma.$transaction(async (tx) => {
-    // 1. Find invite
+  const result = await prisma.$transaction(async (tx) => {
     const invite = await tx.invite.findUnique({
       where: { token },
-      include: {
-        workspace: true,
-      },
+      include: { workspace: true },
     });
 
     if (!invite) {
@@ -51,20 +58,16 @@ export const acceptInviteService = async (
       throw error;
     }
 
-    // 2. Validate status
     if (invite.status !== InviteStatus.PENDING) {
       const error: any = new Error("Invite is no longer valid");
       error.statusCode = 400;
       throw error;
     }
 
-    // 3. Validate expiry
     if (invite.expiresAt < new Date()) {
       await tx.invite.update({
         where: { id: invite.id },
-        data: {
-          status: InviteStatus.EXPIRED,
-        },
+        data: { status: InviteStatus.EXPIRED },
       });
 
       const error: any = new Error("Invite has expired");
@@ -72,7 +75,6 @@ export const acceptInviteService = async (
       throw error;
     }
 
-    // 4. Find logged-in user
     const user = await tx.user.findUnique({
       where: { id: userId },
     });
@@ -83,7 +85,6 @@ export const acceptInviteService = async (
       throw error;
     }
 
-    // 5. Email must match invite email
     if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
       const error: any = new Error(
         "This invite belongs to another email address"
@@ -92,7 +93,6 @@ export const acceptInviteService = async (
       throw error;
     }
 
-    // 6. Already member?
     const existingMembership = await tx.membership.findFirst({
       where: {
         userId,
@@ -106,7 +106,6 @@ export const acceptInviteService = async (
       throw error;
     }
 
-    // 7. Create membership
     await tx.membership.create({
       data: {
         userId,
@@ -115,17 +114,19 @@ export const acceptInviteService = async (
       },
     });
 
-    // 8. Mark invite accepted
     await tx.invite.update({
       where: { id: invite.id },
-      data: {
-        status: InviteStatus.ACCEPTED,
-      },
+      data: { status: InviteStatus.ACCEPTED },
     });
 
     return {
       workspace: invite.workspace,
       role: invite.role,
+      invitedById: invite.invitedById,
+      workspaceId: invite.workspaceId,
+      userEmail: user.email,
     };
   });
+
+  return result;
 };
