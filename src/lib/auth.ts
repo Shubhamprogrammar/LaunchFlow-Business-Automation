@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "../config/prisma";
 import { env } from "../config/env";
+import { handleUserCreated } from "./auth.events"
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -22,4 +23,9 @@ export const auth = betterAuth({
   trustedOrigins: [
     env.FRONTEND_URL
   ],
+  callbacks: {
+    onUserCreated: async (user:any) => {
+      await handleUserCreated(user);
+    },
+  },
 });

@@ -12,6 +12,7 @@ import userRoutes from "./modules/user/user.routes";
 import workspaceRoutes from "./modules/workspace/workspace.routes";
 import inviteRoutes from "./modules/invite/invite.routes";
 import memberRoutes from "./modules/member/member.routes";
+import billingRoutes from "./modules/billing/billing.routes";
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);  
 app.use("/api/invites", inviteRoutes);
 app.use("/api", memberRoutes);
+app.use("/api/billing", billingRoutes);
 app.use("/api", routes);
 
 // Middlewares

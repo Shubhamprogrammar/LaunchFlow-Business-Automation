@@ -15,8 +15,12 @@ const envSchema = z.object({
 
   REDIS_URL: z.string().min(1),
 
-  STRIPE_SECRET_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().min(1),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1),
+
+  STRIPE_PRICE_PRO: z.string().min(1),
+  STRIPE_PRICE_TEAM: z.string().min(1),
+  STRIPE_PRICE_ENTERPRISE: z.string().min(1),
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
