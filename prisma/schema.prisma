@@ -154,6 +154,7 @@ model Workspace {
   apiKeys       ApiKey[]
   uploads       FileUpload[]
   jobs          Job[]
+  notifications Notification[]
 
   @@index([slug])
 }
@@ -208,17 +209,22 @@ model Subscription {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  title     String
-  message   String
-  type      NotificationType @default(INFO)
-  read      Boolean          @default(false)
-  createdAt DateTime         @default(now())
+  id          String           @id @default(cuid())
+  userId      String
+  workspaceId String?
+  title       String
+  message     String
+  type        NotificationType @default(INFO)
+  eventType   String?
+  metadata    Json?
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([workspaceId])
 }
 
 model AuditLog {
@@ -256,6 +262,8 @@ model ApiKey {
   workspaceId String
   name        String
   keyHash     String    @unique
+  prefix      String
+  revoked     Boolean   @default(false)
   lastUsedAt  DateTime?
   createdAt   DateTime  @default(now())
 

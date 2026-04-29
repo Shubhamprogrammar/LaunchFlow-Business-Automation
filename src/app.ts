@@ -13,7 +13,10 @@ import workspaceRoutes from "./modules/workspace/workspace.routes";
 import inviteRoutes from "./modules/invite/invite.routes";
 import memberRoutes from "./modules/member/member.routes";
 import billingRoutes from "./modules/billing/billing.routes";
-
+import realtimeRoutes from "./modules/realtime/realtime.routes";
+import uploadRoutes from "./modules/uploads/upload.routes";
+import apiKeyRoutes from "./modules/apikeys/apikey.routes";
+import analyticsRoutes from "./modules/analytics/analytics.routes";
 const app = express();
 
 // Security
@@ -43,6 +46,10 @@ app.use("/api/auth", toNodeHandler(auth));
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);  
 app.use("/api/invites", inviteRoutes);
+app.use("/api/realtime", realtimeRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/apikeys", apiKeyRoutes);
+app.use("/api/analytics", analyticsRoutes);
 app.use("/api", memberRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api", routes);
