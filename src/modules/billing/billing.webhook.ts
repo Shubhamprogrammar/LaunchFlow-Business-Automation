@@ -28,7 +28,13 @@ export const stripeWebhookController = async (
     const plan = session.metadata?.plan as
       | "PRO"
       | "TEAM"
-      | "ENTERPRISE";
+      | "ENTERPRISE"
+      | undefined;
+
+    if (!workspaceId || !plan) {
+      console.warn("Invalid Stripe checkout metadata");
+      return res.status(200).json({ received: true });
+    }
 
     await prisma.subscription.create({
       data: {

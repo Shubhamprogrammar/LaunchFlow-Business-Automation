@@ -3,7 +3,6 @@ import {
   createInviteSchema,
   acceptInviteParamsSchema,
 } from "./invite.validation";
-
 import {
   createInviteService,
   acceptInviteService,
@@ -56,6 +55,13 @@ export const acceptInviteController = async (
 ) => {
   try {
     const { token } = acceptInviteParamsSchema.parse(req.params);
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
 
     const result = await acceptInviteService(token, req.user.id);
 

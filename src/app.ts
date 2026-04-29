@@ -17,6 +17,9 @@ import realtimeRoutes from "./modules/realtime/realtime.routes";
 import uploadRoutes from "./modules/uploads/upload.routes";
 import apiKeyRoutes from "./modules/apikeys/apikey.routes";
 import analyticsRoutes from "./modules/analytics/analytics.routes";
+import notificationRoutes from "./modules/notifications/notification.routes";
+import auditRoutes from "./modules/audit/audit.routes";
+
 const app = express();
 
 // Security
@@ -24,6 +27,11 @@ app.use(helmet());
 
 // CORS
 app.use(cors());
+
+app.use(
+  "/api/billing/webhook",
+  express.raw({ type: "application/json" })
+);
 
 // Parsers
 app.use(express.json());
@@ -50,6 +58,8 @@ app.use("/api/realtime", realtimeRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/apikeys", apiKeyRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/audit", auditRoutes);
 app.use("/api", memberRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api", routes);

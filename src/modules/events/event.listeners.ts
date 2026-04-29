@@ -14,6 +14,7 @@ export const registerEventListeners = () => {
    */
   eventBus.on(EventTypes.INVITE_CREATED, async (payload) => {
     try {
+      console.log("INVITE_CREATED listener", payload);
       // 🔔 Notification
       await notifyUser({
         userId: payload.userId,

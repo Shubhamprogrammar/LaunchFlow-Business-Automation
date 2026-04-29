@@ -46,67 +46,72 @@ export const acceptInviteService = async (
   token: string,
   userId: string
 ) => {
+  // 1. Fetch invite
+  const invite = await prisma.invite.findUnique({
+    where: { token },
+    include: { workspace: true },
+  });
+
+  if (!invite) {
+    const error: any = new Error("Invite not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (invite.status !== InviteStatus.PENDING) {
+    const error: any = new Error("Invite is no longer valid");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // 2. Expiry check (with update outside transaction)
+  if (invite.expiresAt < new Date()) {
+    await prisma.invite.update({
+      where: { id: invite.id },
+      data: { status: InviteStatus.EXPIRED },
+    });
+
+    const error: any = new Error("Invite has expired");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // 3. Validate user
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    const error: any = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
+    const error: any = new Error(
+      "This invite belongs to another email address"
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // 4. Check existing membership
+  const existingMembership = await prisma.membership.findFirst({
+    where: {
+      userId,
+      workspaceId: invite.workspaceId,
+    },
+  });
+
+  if (existingMembership) {
+    const error: any = new Error("You are already a workspace member");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  // 5. Transaction ONLY for writes
   const result = await prisma.$transaction(async (tx) => {
-    const invite = await tx.invite.findUnique({
-      where: { token },
-      include: { workspace: true },
-    });
-
-    if (!invite) {
-      const error: any = new Error("Invite not found");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    if (invite.status !== InviteStatus.PENDING) {
-      const error: any = new Error("Invite is no longer valid");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (invite.expiresAt < new Date()) {
-      await tx.invite.update({
-        where: { id: invite.id },
-        data: { status: InviteStatus.EXPIRED },
-      });
-
-      const error: any = new Error("Invite has expired");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const user = await tx.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      const error: any = new Error("User not found");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
-      const error: any = new Error(
-        "This invite belongs to another email address"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
-
-    const existingMembership = await tx.membership.findFirst({
-      where: {
-        userId,
-        workspaceId: invite.workspaceId,
-      },
-    });
-
-    if (existingMembership) {
-      const error: any = new Error("You are already a workspace member");
-      error.statusCode = 409;
-      throw error;
-    }
-
-    await tx.membership.create({
+    const membership = await tx.membership.create({
       data: {
         userId,
         workspaceId: invite.workspaceId,
@@ -125,6 +130,7 @@ export const acceptInviteService = async (
       invitedById: invite.invitedById,
       workspaceId: invite.workspaceId,
       userEmail: user.email,
+      membershipId: membership.id,
     };
   });
 

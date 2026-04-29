@@ -1,33 +1,30 @@
 import { Router } from "express";
-import { NotificationService } from "./notification.service";
+import { getUserNotifications, markAsRead, markAllAsRead } from "./notification.service";
+import {requireAuth} from "../../middleware/session.middleware";
 
 const router = Router();
 
 // GET notifications
-router.get("/", async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
+  console.log(req.user);
   const userId = req.user.id;
-
-  const notifications =
-    await NotificationService.getUserNotifications(userId);
-
+  const notifications = await getUserNotifications(userId);
   res.json(notifications);
 });
 
 // MARK ONE AS READ
-router.patch("/:id/read", async (req, res) => {
+router.patch("/:id/read", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
-
-  await NotificationService.markAsRead(id, userId);
-
+  await markAsRead(id, userId);
   res.json({ success: true });
 });
 
 // MARK ALL AS READ
-router.patch("/read-all", async (req, res) => {
+router.patch("/read-all", requireAuth, async (req, res) => {
   const userId = req.user.id;
 
-  await NotificationService.markAllAsRead(userId);
+  await markAllAsRead(userId);
 
   res.json({ success: true });
 });

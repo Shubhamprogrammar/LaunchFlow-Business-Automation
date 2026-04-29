@@ -13,11 +13,7 @@ import { stripeWebhookController } from "./billing.webhook";
 const router = Router();
 
 // Stripe webhook must use raw body
-router.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  stripeWebhookController
-);
+router.post("/webhook", stripeWebhookController);
 
 router.post(
   "/checkout-session",
