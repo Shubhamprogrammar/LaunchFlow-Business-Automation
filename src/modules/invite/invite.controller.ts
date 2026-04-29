@@ -8,8 +8,8 @@ import {
   createInviteService,
   acceptInviteService,
 } from "./invite.service";
-
-import { notifyUser } from "../../modules/notifications/notify";
+import { eventBus } from "../events/event.bus";
+import { EventTypes } from "../events/event.types";
 
 export const createInviteController = async (
   req: Request,
@@ -37,15 +37,7 @@ export const createInviteController = async (
       req.user.id
     );
 
-    // 🔔 NOTIFICATION (Invite created)
-    await notifyUser({
-      userId: event.userId,
-      title: "Invite Sent",
-      message: `You invited ${event.email} to ${event.workspaceName}`,
-      type: "SUCCESS",
-      workspaceId: event.workspaceId,
-      eventType: event.type,
-    });
+    eventBus.emit(EventTypes.INVITE_CREATED, event);
 
     return res.status(201).json({
       success: true,
@@ -67,28 +59,13 @@ export const acceptInviteController = async (
 
     const result = await acceptInviteService(token, req.user.id);
 
-    // 🔔 NOTIFICATIONS
+    eventBus.emit(EventTypes.INVITE_ACCEPTED, result);
 
-    // 1. Notify inviter
-    await notifyUser({
-      userId: result.invitedById,
-      title: "Invite Accepted",
-      message: `${result.userEmail} joined your workspace`,
-      type: "SUCCESS",
-      workspaceId: result.workspaceId,
-      eventType: "INVITE_ACCEPTED",
-    });
-
-    // 2. Notify new member
-    await notifyUser({
+    eventBus.emit("WORKSPACE_JOINED", {
       userId: req.user.id,
-      title: "Welcome!",
-      message: `You joined ${result.workspace.name}`,
-      type: "SUCCESS",
       workspaceId: result.workspaceId,
-      eventType: "WORKSPACE_JOINED",
+      workspaceName: result.workspace.name,
     });
-
     return res.status(200).json({
       success: true,
       message: "Invite accepted successfully",
