@@ -76,3 +76,74 @@ export const revokeApiKey = async (
     },
   });
 };
+
+export const getWorkspaceStats = async (workspaceId: string) => {
+  const [
+    membersCount,
+    invitesCount,
+    notificationsCount,
+    filesCount,
+    apiKeysCount,
+    jobsCount,
+    latestActivity,
+  ] = await Promise.all([
+    prisma.membership.count({
+      where: { workspaceId },
+    }),
+
+    prisma.invite.count({
+      where: { workspaceId },
+    }),
+
+    prisma.notification.count({
+      where: {
+        user: {
+          memberships: {
+            some: { workspaceId },
+          },
+        },
+      },
+    }),
+
+    prisma.fileUpload.count({
+      where: { workspaceId },
+    }),
+
+    prisma.apiKey.count({
+      where: { workspaceId },
+    }),
+
+    prisma.job.count({
+      where: { workspaceId },
+    }),
+
+    prisma.auditLog.findMany({
+      where: { workspaceId },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 5,
+      select: {
+        action: true,
+        entityType: true,
+        createdAt: true,
+        metadata: true,
+      },
+    }),
+  ]);
+
+  return {
+    workspaceId,
+
+    summary: {
+      members: membersCount,
+      invites: invitesCount,
+      notifications: notificationsCount,
+      files: filesCount,
+      apiKeys: apiKeysCount,
+      jobs: jobsCount,
+    },
+
+    latestActivity,
+  };
+};

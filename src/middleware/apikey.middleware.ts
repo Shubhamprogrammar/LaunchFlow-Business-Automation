@@ -12,7 +12,9 @@ export const requireApiKey = async (
     return res.status(401).json({
       message: "Missing API key",
     });
-
+  if (!token.includes(".")) {
+    return res.status(401).json({ message: "Invalid key format" });
+  }
   const prefix = token.split(".")[0];
 
   const key = await prisma.apiKey.findFirst({

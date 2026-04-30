@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import {
-  PutObjectCommand,
+  PutObjectCommand
 } from "@aws-sdk/client-s3";
 import { s3 } from "../../config/s3";
 import { prisma } from "../../config/prisma";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "../../config/env";
 
 export const getUploadUrl = async (
   req: Request,
@@ -15,7 +16,7 @@ export const getUploadUrl = async (
   const key = `uploads/${Date.now()}-${fileName}`;
 
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_BUCKET!,
+    Bucket: env.AWS_BUCKET_NAME!,
     Key: key,
     ContentType: mimeType,
   });
@@ -30,30 +31,27 @@ export const getUploadUrl = async (
     success: true,
     data: {
       uploadUrl,
-      fileUrl: `https://${process.env.AWS_BUCKET}.s3.amazonaws.com/${key}`,
+      fileUrl: `https://${env.AWS_BUCKET_NAME}.s3.amazonaws.com/${key}`,
       key,
     },
   });
 };
 
-
-
 // Save metadata after upload
-
 export const saveUploadedFile = async (
   req: Request,
   res: Response
 ) => {
-  const { fileName, fileUrl, size, mimeType } = req.body;
+  const {workspaceId, fileName, key, size, mimeType } = req.body;
 
   const file = await prisma.fileUpload.create({
     data: {
       fileName,
-      fileUrl,
+      fileUrl:key,
       size,
       mimeType,
       userId: req.user.id,
-      workspaceId: req.body.workspaceId,
+      workspaceId,
     },
   });
 

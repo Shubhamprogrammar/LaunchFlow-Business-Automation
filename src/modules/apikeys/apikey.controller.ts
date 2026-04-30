@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { createApiKey, listApiKeys, revokeApiKey } from "./apikey.service";
-import { prisma } from "../../config/prisma";
+import { createApiKey, listApiKeys, revokeApiKey, getWorkspaceStats } from "./apikey.service";
 
 export const createApiKeyController = async (
   req: Request,
@@ -20,13 +19,8 @@ export const createApiKeyController = async (
   });
 };
 
-export const getStatsController = async (
-  req: any,
-  res: Response,
-  next: NextFunction
-) => {
+export const getStatsController = async (req: any, res: Response, next: NextFunction) => {
   try {
-    // attached from requireApiKey middleware
     const apiKey = req.apiKey;
 
     if (!apiKey) {
@@ -38,77 +32,11 @@ export const getStatsController = async (
 
     const workspaceId = apiKey.workspaceId;
 
-    // Fetch workspace stats
-    const [
-      membersCount,
-      invitesCount,
-      notificationsCount,
-      filesCount,
-      apiKeysCount,
-      jobsCount,
-      latestActivity,
-    ] = await Promise.all([
-      prisma.membership.count({
-        where: { workspaceId },
-      }),
-
-      prisma.invite.count({
-        where: { workspaceId },
-      }),
-
-      prisma.notification.count({
-        where: {
-          user: {
-            memberships: {
-              some: { workspaceId },
-            },
-          },
-        },
-      }),
-
-      prisma.fileUpload.count({
-        where: { workspaceId },
-      }),
-
-      prisma.apiKey.count({
-        where: { workspaceId },
-      }),
-
-      prisma.job.count({
-        where: { workspaceId },
-      }),
-
-      prisma.auditLog.findMany({
-        where: { workspaceId },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 5,
-        select: {
-          action: true,
-          entityType: true,
-          createdAt: true,
-          metadata: true,
-        },
-      }),
-    ]);
+    const data = await getWorkspaceStats(workspaceId);
 
     return res.status(200).json({
       success: true,
-      data: {
-        workspaceId,
-
-        summary: {
-          members: membersCount,
-          invites: invitesCount,
-          notifications: notificationsCount,
-          files: filesCount,
-          apiKeys: apiKeysCount,
-          jobs: jobsCount,
-        },
-
-        latestActivity,
-      },
+      data,
     });
   } catch (error) {
     next(error);
