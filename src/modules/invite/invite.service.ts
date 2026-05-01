@@ -6,9 +6,59 @@ import { addInviteEmailJob } from "../../jobs/email.jobs";
 export const createInviteService = async (
   workspaceId: string,
   email: string,
-  workspaceName: string,
   invitedById: string
 ) => {
+  const workspace = await prisma.workspace.findUnique({
+    where: {
+      id: workspaceId,
+    },
+  });
+
+  if (!workspace) {
+    const error: any = new Error("Workspace not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const membership = await prisma.membership.findFirst({
+    where: {
+      workspaceId,
+      userId: invitedById,
+    },
+  });
+
+  if (!membership) {
+    const error: any = new Error(
+      "You are not a member of this workspace"
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+  if (
+    membership.role !== "OWNER" &&
+    membership.role !== "ADMIN"
+  ) {
+    const error: any = new Error(
+      "You do not have permission to invite users"
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+const existingInvite = await prisma.invite.findFirst({
+    where: {
+      workspaceId,
+      email,
+      status: InviteStatus.PENDING,
+    },
+  });
+
+  if (existingInvite) {
+    const error: any = new Error(
+      "Invite already exists"
+    );
+    error.statusCode = 409;
+    throw error;
+  }
   const token = crypto.randomBytes(24).toString("hex");
 
   const invite = await prisma.invite.create({
@@ -25,7 +75,7 @@ export const createInviteService = async (
   // EMAIL (SIDE EFFECT BUT OK HERE BECAUSE IT'S QUEUE-BASED)
   await addInviteEmailJob({
     email,
-    workspaceName,
+    workspaceName:workspace.name,
     inviteLink: `${process.env.FRONTEND_URL}/invite/${token}`,
   });
 
@@ -36,7 +86,7 @@ export const createInviteService = async (
       type: "INVITE_CREATED",
       userId: invitedById,
       email,
-      workspaceName,
+      workspaceName: workspace.name,
       workspaceId,
     },
   };
@@ -131,6 +181,7 @@ export const acceptInviteService = async (
       workspaceId: invite.workspaceId,
       userEmail: user.email,
       membershipId: membership.id,
+      userId,
     };
   });
 

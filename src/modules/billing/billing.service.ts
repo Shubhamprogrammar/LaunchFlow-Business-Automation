@@ -38,6 +38,7 @@ export const createCheckoutSessionService = async (
       plan,
     },
   });
+  console.log("service session", session);
 
   return session;
 };

@@ -8,6 +8,7 @@ import {
   updateMemberRoleController,
   removeMemberController,
 } from "./member.controller";
+import { trackDevice } from "../../middleware/device.middleware";
 
 const router = Router();
 
@@ -15,6 +16,7 @@ const router = Router();
 router.get(
   "/workspaces/:workspaceId/members",
   requireAuth,
+  trackDevice,
   requireWorkspaceRole("OWNER", "ADMIN", "MANAGER"),
   getWorkspaceMembersController
 );
@@ -23,6 +25,7 @@ router.get(
 router.patch(
   "/members/:membershipId/role",
   requireAuth,
+  trackDevice,
   updateMemberRoleController
 );
 
@@ -30,6 +33,7 @@ router.patch(
 router.delete(
   "/members/:membershipId",
   requireAuth,
+  trackDevice,
   removeMemberController
 );
 

@@ -32,7 +32,6 @@ export const createInviteController = async (
     const { invite, event } = await createInviteService(
       workspaceId,
       email,
-      req.body.workspaceName,
       req.user.id
     );
 

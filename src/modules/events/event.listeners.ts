@@ -1,8 +1,5 @@
-// src/modules/events/event.listeners.ts
-
 import { eventBus } from "./event.bus";
 import { EventTypes } from "./event.types";
-
 import { notifyUser } from "../notifications/notify";
 import { createAuditLog } from "../audit/audit.service";
 
@@ -48,6 +45,7 @@ export const registerEventListeners = () => {
    */
   eventBus.on(EventTypes.INVITE_ACCEPTED, async (payload) => {
     try {
+      console.log("INVITE_ACCEPTED listener", payload);
       // 🔔 Notify inviter
       await notifyUser({
         userId: payload.invitedById,
@@ -66,6 +64,7 @@ export const registerEventListeners = () => {
         entityType: "MEMBERSHIP",
         metadata: {
           joinedEmail: payload.userEmail,
+          workspaceName: payload.workspace,
         },
       });
     } catch (error) {
@@ -80,6 +79,7 @@ export const registerEventListeners = () => {
    */
   eventBus.on(EventTypes.WORKSPACE_JOINED, async (payload) => {
     try {
+      console.log("WORKSPACE_JOINED listener", payload);
       // 🔔 Notify joining user
       await notifyUser({
         userId: payload.userId,
@@ -98,6 +98,7 @@ export const registerEventListeners = () => {
         entityType: "MEMBERSHIP",
         metadata: {
           workspaceName: payload.workspaceName,
+          joinedEmail: payload.userEmail,
         },
       });
     } catch (error) {
@@ -112,6 +113,7 @@ export const registerEventListeners = () => {
    */
   eventBus.on(EventTypes.WORKSPACE_CREATED, async (payload) => {
     try {
+      console.log("WORKSPACE_CREATED listener", payload);
       await createAuditLog({
         workspaceId: payload.workspaceId,
         actorId: payload.userId,

@@ -12,3 +12,19 @@ export const createAuditLog = async (data: {
     data,
   });
 };
+
+export const getWorkspaceActivityService = async (
+  workspaceId: string
+) => {
+  const logs = await prisma.auditLog.findMany({
+    where: {
+      workspaceId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 50
+  });
+
+  return logs;
+};

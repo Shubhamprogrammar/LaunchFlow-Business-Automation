@@ -42,12 +42,12 @@ export const saveUploadedFile = async (
   req: Request,
   res: Response
 ) => {
-  const {workspaceId, fileName, key, size, mimeType } = req.body;
+  const {workspaceId, fileName, fileUrl, size, mimeType } = req.body;
 
   const file = await prisma.fileUpload.create({
     data: {
       fileName,
-      fileUrl:key,
+      fileUrl,
       size,
       mimeType,
       userId: req.user.id,

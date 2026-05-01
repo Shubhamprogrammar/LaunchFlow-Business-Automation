@@ -24,7 +24,7 @@ export const createCheckoutSessionController = async (
         workspaceId,
         plan
       );
-      console.log(session);
+      console.log("sessions",session);
     return res.status(200).json({
       success: true,
       url: session.url,

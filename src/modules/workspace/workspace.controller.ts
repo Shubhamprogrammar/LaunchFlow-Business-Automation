@@ -3,6 +3,8 @@ import {
   createWorkspaceService,
   getMyWorkspacesService,
 } from "./workspace.service";
+import { eventBus } from "../events/event.bus";
+import { EventTypes } from "../events/event.types";
 
 export const createWorkspace = async (
   req: Request,
@@ -15,6 +17,12 @@ export const createWorkspace = async (
             req.user!.id,
             name
         );
+        eventBus.emit(EventTypes.WORKSPACE_CREATED, {
+            type: "WORKSPACE_CREATED",
+            userId: req.user!.id,
+            workspaceId: workspace.id,
+            workspaceName: workspace.name,
+        });
 
         return res.status(201).json({
             success: true,

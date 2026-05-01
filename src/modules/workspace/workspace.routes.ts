@@ -4,10 +4,11 @@ import {
   createWorkspace,
   getMyWorkspaces,
 } from "./workspace.controller";
+import { trackDevice } from "../../middleware/device.middleware";
 
 const router = Router();
 
-router.post("/create-workspace", requireAuth, createWorkspace);
-router.get("/my-workspaces", requireAuth, getMyWorkspaces);
+router.post("/create-workspace", requireAuth, trackDevice, createWorkspace);
+router.get("/my-workspaces", requireAuth, trackDevice, getMyWorkspaces);
 
 export default router;

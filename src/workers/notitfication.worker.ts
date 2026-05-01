@@ -5,6 +5,7 @@ import { createNotification } from "../modules/notifications/notification.servic
 export const notificationWorker = new Worker(
   "notifications",
   async (job) => {
+    console.log("Processing notification job:", job);
     const data = job.data;
     console.log(data);
     await createNotification({

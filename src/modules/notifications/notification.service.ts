@@ -13,6 +13,7 @@ type CreateNotificationInput = {
 export const createNotification = async (
   input: CreateNotificationInput
 ) => {
+  console.log("Creating notification with input:", input);
   return prisma.notification.create({
     data: {
       userId: input.userId,

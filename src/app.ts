@@ -19,6 +19,8 @@ import apiKeyRoutes from "./modules/apikeys/apikey.routes";
 import analyticsRoutes from "./modules/analytics/analytics.routes";
 import notificationRoutes from "./modules/notifications/notification.routes";
 import auditRoutes from "./modules/audit/audit.routes";
+import deviceRoutes from "./modules/device/device.routes";
+import { trackDevice } from "./middleware/device.middleware";
 
 const app = express();
 
@@ -60,6 +62,7 @@ app.use("/api/apikeys", apiKeyRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/audit", auditRoutes);
+app.use("/api/devices", deviceRoutes);
 app.use("/api", memberRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api", routes);
