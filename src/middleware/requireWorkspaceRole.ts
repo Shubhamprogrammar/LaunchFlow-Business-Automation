@@ -32,7 +32,7 @@ export const requireWorkspaceRole =
         });
       }
 
-      if (!allowedRoles.includes(membership.role)) {
+      if (allowedRoles.length > 0 && !allowedRoles.includes(membership.role)) {
         return res.status(403).json({
           success: false,
           message: "Insufficient permissions",

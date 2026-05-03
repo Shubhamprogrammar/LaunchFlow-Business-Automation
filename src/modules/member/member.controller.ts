@@ -62,7 +62,7 @@ export const removeMemberController = async (
   try {
     const { membershipId } = membershipParamsSchema.parse(req.params);
 
-    await removeMemberService(membershipId);
+    await removeMemberService(membershipId, (req as any).user.id);
 
     return res.status(200).json({
       success: true,

@@ -1,4 +1,6 @@
 import { prisma } from "../../config/prisma";
+import { eventBus } from "../events/event.bus";
+import { EventTypes } from "../events/event.types";
 
 const generateSlug = (name: string) => {
   return name
@@ -49,6 +51,12 @@ export const createWorkspaceService = async (
       });
     });
 
+    eventBus.emit(EventTypes.WORKSPACE_CREATED, {
+      userId,
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+    });
+
     return workspace;
   } catch (error) {
     throw error;
@@ -68,7 +76,6 @@ export const getMyWorkspacesService = async (userId: string) => {
         });
     }
     catch (error) {
-        console.log(error);
         throw error;
     }
 };

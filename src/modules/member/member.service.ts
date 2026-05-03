@@ -1,4 +1,6 @@
 import { prisma } from "../../config/prisma";
+import { eventBus } from "../events/event.bus";
+import { EventTypes } from "../events/event.types";
 
 export const getWorkspaceMembersService = async (
   workspaceId: string
@@ -49,7 +51,8 @@ export const updateMemberRoleService = async (
 };
 
 export const removeMemberService = async (
-  membershipId: string
+  membershipId: string,
+  requesterId: string
 ) => {
   const membership = await prisma.membership.findUnique({
     where: { id: membershipId },
@@ -61,6 +64,26 @@ export const removeMemberService = async (
     throw error;
   }
 
+  // Check requester permissions
+  const requesterMembership = await prisma.membership.findFirst({
+    where: {
+      workspaceId: membership.workspaceId,
+      userId: requesterId,
+    },
+  });
+
+  if (
+    !requesterMembership ||
+    (requesterMembership.role !== "OWNER" &&
+      requesterMembership.role !== "ADMIN")
+  ) {
+    const error: any = new Error(
+      "You don't have permission to remove members"
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
   if (membership.role === "OWNER") {
     const error: any = new Error("Owner cannot be removed");
     error.statusCode = 403;
@@ -69,6 +92,12 @@ export const removeMemberService = async (
 
   await prisma.membership.delete({
     where: { id: membershipId },
+  });
+
+  eventBus.emit(EventTypes.MEMBER_REMOVED, {
+    workspaceId: membership.workspaceId,
+    userId: requesterId,
+    targetUserId: membership.userId,
   });
 
   return true;

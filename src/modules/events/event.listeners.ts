@@ -155,6 +155,25 @@ export const registerEventListeners = () => {
 
   /**
    * ==================================================
+   * MEMBER REMOVED
+   * ==================================================
+   */
+  eventBus.on(EventTypes.MEMBER_REMOVED, async (payload) => {
+    try {
+      await createAuditLog({
+        workspaceId: payload.workspaceId,
+        actorId: payload.userId,
+        action: "MEMBER_REMOVED",
+        entityType: "MEMBERSHIP",
+        entityId: payload.targetUserId,
+      });
+    } catch (error) {
+      console.error("MEMBER_REMOVED listener error:", error);
+    }
+  });
+
+  /**
+   * ==================================================
    * SUBSCRIPTION UPDATED
    * ==================================================
    */
@@ -208,6 +227,25 @@ export const registerEventListeners = () => {
 
   /**
    * ==================================================
+   * API KEY REVOKED
+   * ==================================================
+   */
+  eventBus.on(EventTypes.API_KEY_REVOKED, async (payload) => {
+    try {
+      await createAuditLog({
+        workspaceId: payload.workspaceId,
+        actorId: payload.userId,
+        action: "API_KEY_REVOKED",
+        entityType: "API_KEY",
+        entityId: payload.apiKeyId,
+      });
+    } catch (error) {
+      console.error("API_KEY_REVOKED listener error:", error);
+    }
+  });
+
+  /**
+   * ==================================================
    * FILE UPLOADED
    * ==================================================
    */
@@ -226,6 +264,27 @@ export const registerEventListeners = () => {
       });
     } catch (error) {
       console.error("FILE_UPLOADED listener error:", error);
+    }
+  });
+
+  /**
+   * ==================================================
+   * FILE DELETED
+   * ==================================================
+   */
+  eventBus.on(EventTypes.FILE_DELETED, async (payload) => {
+    try {
+      await createAuditLog({
+        workspaceId: payload.workspaceId,
+        actorId: payload.userId,
+        action: "FILE_DELETED",
+        entityType: "FILE",
+        metadata: {
+          fileName: payload.fileName,
+        },
+      });
+    } catch (error) {
+      console.error("FILE_DELETED listener error:", error);
     }
   });
 

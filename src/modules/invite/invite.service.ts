@@ -1,7 +1,10 @@
 import { prisma } from "../../config/prisma";
+import { env } from "../../config/env";
 import crypto from "crypto";
 import { InviteStatus } from "../../../generated/prisma/enums";
 import { addInviteEmailJob } from "../../jobs/email.jobs";
+import { eventBus } from "../events/event.bus";
+import { EventTypes } from "../events/event.types";
 
 export const createInviteService = async (
   workspaceId: string,
@@ -9,56 +12,43 @@ export const createInviteService = async (
   invitedById: string
 ) => {
   const workspace = await prisma.workspace.findUnique({
-    where: {
-      id: workspaceId,
-    },
+    where: { id: workspaceId },
   });
 
-  if (!workspace) {
-    const error: any = new Error("Workspace not found");
-    error.statusCode = 404;
-    throw error;
-  }
+  if (!workspace) throw new Error("Workspace not found");
 
   const membership = await prisma.membership.findFirst({
-    where: {
-      workspaceId,
-      userId: invitedById,
-    },
+    where: { workspaceId, userId: invitedById },
   });
 
-  if (!membership) {
-    const error: any = new Error(
-      "You are not a member of this workspace"
-    );
-    error.statusCode = 403;
-    throw error;
+  if (!membership || (membership.role !== "OWNER" && membership.role !== "ADMIN")) {
+    throw new Error("Unauthorized to invite");
   }
-  if (
-    membership.role !== "OWNER" &&
-    membership.role !== "ADMIN"
-  ) {
-    const error: any = new Error(
-      "You do not have permission to invite users"
-    );
-    error.statusCode = 403;
-    throw error;
+
+  // --- PLAN LIMIT CHECK ---
+  // ... (previous logic)
+  const [memberCount, pendingInvites, subscription] = await Promise.all([
+    prisma.membership.count({ where: { workspaceId } }),
+    prisma.invite.count({ where: { workspaceId, status: InviteStatus.PENDING } }),
+    prisma.subscription.findFirst({
+      where: { workspaceId, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  const currentPlan = subscription?.plan || "FREE";
+  const limit = currentPlan === "PRO" ? 20 : (currentPlan === "TEAM" || currentPlan === "ENTERPRISE") ? Infinity : 3;
+
+  if (memberCount + pendingInvites >= limit) {
+    throw new Error(`Member limit reached for ${currentPlan} plan.`);
   }
-const existingInvite = await prisma.invite.findFirst({
-    where: {
-      workspaceId,
-      email,
-      status: InviteStatus.PENDING,
-    },
+
+  const existingInvite = await prisma.invite.findFirst({
+    where: { workspaceId, email, status: InviteStatus.PENDING },
   });
 
-  if (existingInvite) {
-    const error: any = new Error(
-      "Invite already exists"
-    );
-    error.statusCode = 409;
-    throw error;
-  }
+  if (existingInvite) throw new Error("Invite already exists");
+
   const token = crypto.randomBytes(24).toString("hex");
 
   const invite = await prisma.invite.create({
@@ -72,24 +62,20 @@ const existingInvite = await prisma.invite.findFirst({
     },
   });
 
-  // EMAIL (SIDE EFFECT BUT OK HERE BECAUSE IT'S QUEUE-BASED)
-  await addInviteEmailJob({
+  eventBus.emit(EventTypes.INVITE_CREATED, {
+    workspaceId,
+    userId: invitedById,
     email,
-    workspaceName:workspace.name,
-    inviteLink: `${process.env.FRONTEND_URL}/invite/${token}`,
+    workspaceName: workspace.name,
   });
 
-  // RETURN EVENT DATA (NO NOTIFICATIONS HERE)
-  return {
-    invite,
-    event: {
-      type: "INVITE_CREATED",
-      userId: invitedById,
-      email,
-      workspaceName: workspace.name,
-      workspaceId,
-    },
-  };
+  await addInviteEmailJob({
+    email,
+    workspaceName: workspace.name,
+    inviteLink: `${env.FRONTEND_URL}/invite/${token}`,
+  });
+
+  return { invite };
 };
 
 export const acceptInviteService = async (
@@ -159,6 +145,26 @@ export const acceptInviteService = async (
     throw error;
   }
 
+  // 4.5 Plan limit check on acceptance
+  const [memberCount, subscription] = await Promise.all([
+    prisma.membership.count({ where: { workspaceId: invite.workspaceId } }),
+    prisma.subscription.findFirst({
+      where: { workspaceId: invite.workspaceId, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  const currentPlan = subscription?.plan || "FREE";
+  const limit = currentPlan === "PRO" ? 20 : (currentPlan === "TEAM" || currentPlan === "ENTERPRISE") ? Infinity : 3;
+
+  if (memberCount >= limit) {
+    const error: any = new Error(
+      `Workspace member limit reached (${limit} members). The workspace owner needs to upgrade their plan.`
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
   // 5. Transaction ONLY for writes
   const result = await prisma.$transaction(async (tx) => {
     const membership = await tx.membership.create({
@@ -185,5 +191,32 @@ export const acceptInviteService = async (
     };
   });
 
+  // Emit events AFTER transaction succeeds
+  eventBus.emit(EventTypes.INVITE_ACCEPTED, {
+    workspaceId: invite.workspaceId,
+    userId,
+    invitedById: invite.invitedById,
+    userEmail: user.email,
+    workspace: invite.workspace.name,
+  });
+
+  eventBus.emit(EventTypes.WORKSPACE_JOINED, {
+    userId,
+    workspaceId: invite.workspaceId,
+    workspaceName: invite.workspace.name,
+  });
+
   return result;
+};
+
+export const getWorkspaceInvitesService = async (workspaceId: string) => {
+  return prisma.invite.findMany({
+    where: {
+      workspaceId,
+      status: InviteStatus.PENDING,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 };

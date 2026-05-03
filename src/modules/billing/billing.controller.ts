@@ -8,6 +8,7 @@ import {
   createCheckoutSessionService,
   getCurrentPlanService,
   cancelSubscriptionService,
+  createCustomerPortalSessionService,
 } from "./billing.service";
 
 export const createCheckoutSessionController = async (
@@ -24,7 +25,6 @@ export const createCheckoutSessionController = async (
         workspaceId,
         plan
       );
-      console.log("sessions",session);
     return res.status(200).json({
       success: true,
       url: session.url,
@@ -69,6 +69,27 @@ export const cancelSubscriptionController = async (
     return res.status(200).json({
       success: true,
       message: "Subscription cancelled",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createCustomerPortalController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { workspaceId } = req.body;
+
+    const session = await createCustomerPortalSessionService(
+      workspaceId
+    );
+
+    return res.status(200).json({
+      success: true,
+      url: session.url,
     });
   } catch (error) {
     next(error);

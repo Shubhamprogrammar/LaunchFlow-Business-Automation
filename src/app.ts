@@ -20,7 +20,7 @@ import analyticsRoutes from "./modules/analytics/analytics.routes";
 import notificationRoutes from "./modules/notifications/notification.routes";
 import auditRoutes from "./modules/audit/audit.routes";
 import deviceRoutes from "./modules/device/device.routes";
-import { trackDevice } from "./middleware/device.middleware";
+import { env } from "./config/env";
 
 const app = express();
 
@@ -28,7 +28,10 @@ const app = express();
 app.use(helmet());
 
 // CORS
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', env.FRONTEND_URL].filter(Boolean),
+  credentials: true
+}));
 
 app.use(
   "/api/billing/webhook",

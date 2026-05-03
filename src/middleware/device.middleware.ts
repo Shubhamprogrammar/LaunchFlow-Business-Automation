@@ -13,9 +13,9 @@ export const trackDevice = async (
     const userAgent = req.headers["user-agent"] || "";
     const parser = new UAParser(userAgent);
 
-    const deviceName = parser.getDevice().model || "Unknown Device";
-    const browser = parser.getBrowser().name;
-    const os = parser.getOS().name;
+    const browser = parser.getBrowser().name || "Unknown Browser";
+    const os = parser.getOS().name || "Unknown OS";
+    const deviceName = parser.getDevice().model || `${os} ${browser}`;
 
     const ip =
       req.ip ||

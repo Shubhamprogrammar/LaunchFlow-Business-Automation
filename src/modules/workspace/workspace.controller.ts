@@ -1,62 +1,45 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import {
   createWorkspaceService,
   getMyWorkspacesService,
 } from "./workspace.service";
-import { eventBus } from "../events/event.bus";
-import { EventTypes } from "../events/event.types";
 
 export const createWorkspace = async (
   req: Request,
-  res: Response
+  res: Response,
+  next: NextFunction
 ) => {
-    try{
-        const { name } = req.body;
+  try {
+    const { name } = req.body;
 
-        const workspace = await createWorkspaceService(
-            req.user!.id,
-            name
-        );
-        eventBus.emit(EventTypes.WORKSPACE_CREATED, {
-            type: "WORKSPACE_CREATED",
-            userId: req.user!.id,
-            workspaceId: workspace.id,
-            workspaceName: workspace.name,
-        });
+    const workspace = await createWorkspaceService(
+      req.user!.id,
+      name
+    );
 
-        return res.status(201).json({
-            success: true,
-            workspace,
-        });
-    }
-    catch(error){
-        console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-        });
-    }
-  
+    return res.status(201).json({
+      success: true,
+      workspace,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const getMyWorkspaces = async (
   req: Request,
-  res: Response
+  res: Response,
+  next: NextFunction
 ) => {
-    try {
-        const workspaces = await getMyWorkspacesService(
-            req.user!.id
-        );
-        return res.status(200).json({
-            success: true,
-            workspaces,
-        });
-    }
-    catch(error){
-        console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-        }); 
-    }
+  try {
+    const workspaces = await getMyWorkspacesService(
+      req.user!.id
+    );
+    return res.status(200).json({
+      success: true,
+      workspaces,
+    });
+  } catch (error) {
+    next(error);
+  }
 };

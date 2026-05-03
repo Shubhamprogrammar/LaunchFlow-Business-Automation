@@ -23,6 +23,7 @@ export const getWorkspaceAnalytics = async (
     const [
       totalMembers,
       totalInvites,
+      pendingInvites,
       acceptedInvites,
       totalFiles,
       totalApiKeys,
@@ -35,6 +36,13 @@ export const getWorkspaceAnalytics = async (
 
       prisma.invite.count({
         where: { workspaceId },
+      }),
+
+      prisma.invite.count({
+        where: {
+          workspaceId,
+          status: "PENDING",
+        },
       }),
 
       prisma.invite.count({
@@ -84,6 +92,7 @@ export const getWorkspaceAnalytics = async (
         overview: {
           members: totalMembers,
           invites: totalInvites,
+          pendingInvites,
           acceptedInvites,
           inviteConversion,
           files: totalFiles,

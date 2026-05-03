@@ -31,15 +31,13 @@ export const createCheckoutSessionService = async (
         quantity: 1,
       },
     ],
-    success_url: `${process.env.FRONTEND_URL}/billing/success`,
-    cancel_url: `${process.env.FRONTEND_URL}/billing/cancel`,
+    success_url: `${env.FRONTEND_URL}/billing/success`,
+    cancel_url: `${env.FRONTEND_URL}/billing/cancel`,
     metadata: {
       workspaceId,
       plan,
     },
   });
-  console.log("service session", session);
-
   return session;
 };
 
@@ -87,4 +85,26 @@ export const cancelSubscriptionService = async (
   });
 
   return true;
+};
+
+export const createCustomerPortalSessionService = async (
+  workspaceId: string
+) => {
+  const subscription = await prisma.subscription.findFirst({
+    where: { workspaceId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!subscription || !subscription.stripeCustomerId) {
+    const error: any = new Error("No active billing account found. Please subscribe first.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: subscription.stripeCustomerId,
+    return_url: `${env.FRONTEND_URL}/dashboard/billing`,
+  });
+
+  return session;
 };

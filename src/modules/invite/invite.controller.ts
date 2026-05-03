@@ -6,9 +6,8 @@ import {
 import {
   createInviteService,
   acceptInviteService,
+  getWorkspaceInvitesService,
 } from "./invite.service";
-import { eventBus } from "../events/event.bus";
-import { EventTypes } from "../events/event.types";
 
 export const createInviteController = async (
   req: Request,
@@ -29,13 +28,11 @@ export const createInviteController = async (
       });
     }
 
-    const { invite, event } = await createInviteService(
+    const { invite } = await createInviteService(
       workspaceId,
       email,
       req.user.id
     );
-
-    eventBus.emit(EventTypes.INVITE_CREATED, event);
 
     return res.status(201).json({
       success: true,
@@ -63,18 +60,38 @@ export const acceptInviteController = async (
     }
 
     const result = await acceptInviteService(token, req.user.id);
-
-    eventBus.emit(EventTypes.INVITE_ACCEPTED, result);
-
-    eventBus.emit("WORKSPACE_JOINED", {
-      userId: req.user.id,
-      workspaceId: result.workspaceId,
-      workspaceName: result.workspace.name,
-    });
     return res.status(200).json({
       success: true,
       message: "Invite accepted successfully",
       data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWorkspaceInvitesController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const workspaceId = Array.isArray(req.params.workspaceId)
+      ? req.params.workspaceId[0]
+      : req.params.workspaceId;
+
+    if (!workspaceId) {
+      return res.status(400).json({
+        success: false,
+        message: "Workspace ID is required",
+      });
+    }
+
+    const invites = await getWorkspaceInvitesService(workspaceId);
+
+    return res.status(200).json({
+      success: true,
+      data: invites,
     });
   } catch (error) {
     next(error);

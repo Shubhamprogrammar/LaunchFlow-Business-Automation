@@ -3,20 +3,18 @@ import { createApiKey, listApiKeys, revokeApiKey, getWorkspaceStats } from "./ap
 
 export const createApiKeyController = async (
   req: Request,
-  res: Response
+  res: Response,
+  next: NextFunction
 ) => {
-  const { workspaceId, name } = req.body;
+  try {
+    const { workspaceId, name } = req.body;
 
-  const result = await createApiKey(
-    req.user.id,
-    workspaceId,
-    name
-  );
+    const result = await createApiKey( req.user.id, workspaceId, name );
 
-  res.json({
-    success: true,
-    data: result,
-  });
+    res.json({ success: true, data: result, });
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const getStatsController = async (req: any, res: Response, next: NextFunction) => {
@@ -76,10 +74,7 @@ export const revokeApiKeyController = async (
   try {
     const keyId = req.params.id;
 
-    await revokeApiKey(
-      keyId as string,
-      req.body.workspaceId
-    );
+    await revokeApiKey( keyId as string, req.body.workspaceId );
 
     return res.status(200).json({
       success: true,

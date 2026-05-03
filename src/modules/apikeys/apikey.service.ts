@@ -1,6 +1,9 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../config/prisma";
+import { eventBus } from "../events/event.bus";
+import { EventTypes } from "../events/event.types";
+import { InviteStatus } from "../../../generated/prisma/enums";
 
 export const createApiKey = async (
   userId: string,
@@ -29,6 +32,13 @@ export const createApiKey = async (
     },
   });
 
+  eventBus.emit(EventTypes.API_KEY_CREATED, {
+    workspaceId,
+    userId,
+    apiKeyId: key.id,
+    name: key.name,
+  });
+
   return {
     id: key.id,
     name: key.name,
@@ -36,10 +46,7 @@ export const createApiKey = async (
   };
 };
 
-
-
 // list keys
-
 export const listApiKeys = async (
   workspaceId: string
 ) => {
@@ -61,26 +68,33 @@ export const listApiKeys = async (
   });
 };
 
-
-
 // revoke
-
 export const revokeApiKey = async (
   keyId: string,
-  workspaceId: string
+  workspaceId: string,
+  userId?: string
 ) => {
-  return prisma.apiKey.update({
+  const result = await prisma.apiKey.update({
     where: { id: keyId },
     data: {
       revoked: true,
     },
   });
+
+  eventBus.emit(EventTypes.API_KEY_REVOKED, {
+    workspaceId: result.workspaceId,
+    userId,
+    apiKeyId: keyId,
+  });
+
+  return result;
 };
 
 export const getWorkspaceStats = async (workspaceId: string) => {
   const [
     membersCount,
-    invitesCount,
+    pendingInvitesCount,
+    acceptedInvitesCount,
     notificationsCount,
     filesCount,
     apiKeysCount,
@@ -92,7 +106,11 @@ export const getWorkspaceStats = async (workspaceId: string) => {
     }),
 
     prisma.invite.count({
-      where: { workspaceId },
+      where: { workspaceId, status: InviteStatus.PENDING },
+    }),
+
+    prisma.invite.count({
+      where: { workspaceId, status: InviteStatus.ACCEPTED },
     }),
 
     prisma.notification.count({
@@ -137,7 +155,8 @@ export const getWorkspaceStats = async (workspaceId: string) => {
 
     summary: {
       members: membersCount,
-      invites: invitesCount,
+      pendingInvites: pendingInvitesCount,
+      acceptedInvites: acceptedInvitesCount,
       notifications: notificationsCount,
       files: filesCount,
       apiKeys: apiKeysCount,

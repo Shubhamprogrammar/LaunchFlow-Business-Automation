@@ -6,6 +6,7 @@ import {
   createCheckoutSessionController,
   getCurrentPlanController,
   cancelSubscriptionController,
+  createCustomerPortalController,
 } from "./billing.controller";
 
 import { stripeWebhookController } from "./billing.webhook";
@@ -31,6 +32,12 @@ router.post(
   "/cancel",
   requireAuth,
   cancelSubscriptionController
+);
+
+router.post(
+  "/customer-portal",
+  requireAuth,
+  createCustomerPortalController
 );
 
 export default router;
