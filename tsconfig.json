@@ -4,6 +4,7 @@
     "moduleResolution": "bundler",
     "target": "ES2023",
     "strict": true,
+    "outDir": "./dist",
     "esModuleInterop": true,
     "ignoreDeprecations": "6.0"
   }
