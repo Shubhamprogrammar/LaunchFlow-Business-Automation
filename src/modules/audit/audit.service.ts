@@ -20,6 +20,14 @@ export const getWorkspaceActivityService = async (
     where: {
       workspaceId,
     },
+    include: {
+      actor: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+    },
     orderBy: {
       createdAt: "desc",
     },

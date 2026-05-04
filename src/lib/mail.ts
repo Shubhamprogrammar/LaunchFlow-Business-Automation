@@ -11,6 +11,8 @@ const transporter = nodemailer.createTransport({
     pass: env.SMTP_PASS,
   },
 });
+const APP_URL = env.FRONTEND_URL;
+const dashboardUrl = `${APP_URL}/dashboard`;
 
 /**
  * Public function to queue verification email
@@ -65,9 +67,9 @@ export const executeSendVerificationEmail = async ({
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`✅ Verification email sent to ${email}`);
+    console.log(`Verification email sent to ${email}`);
   } catch (error) {
-    console.error("❌ Failed to send verification email:", error);
+    console.error("Failed to send verification email:", error);
     if (env.NODE_ENV === "development") {
       console.log("DEV: Verification URL:", url);
     }
@@ -106,9 +108,9 @@ export const executeSendPasswordResetEmail = async ({
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`✅ Password reset email sent to ${email}`);
+    console.log(`Password reset email sent to ${email}`);
   } catch (error) {
-    console.error("❌ Failed to send password reset email:", error);
+    console.error("Failed to send password reset email:", error);
     if (env.NODE_ENV === "development") {
       console.log("DEV: Password Reset URL:", url);
     }
@@ -126,18 +128,40 @@ export const executeSendWelcomeEmail = async ({
   email: string;
   name: string;
 }) => {
-  const mailOptions = {
-    from: "LaunchFlow <no-reply@launchflow.com>",
-    to: email,
-    subject: "Welcome to LaunchFlow 🚀",
-    text: `Hi ${name}, welcome aboard!`,
-  };
+const mailOptions = {
+  from: "LaunchFlow <no-reply@launchflow.com>",
+  to: email,
+  subject: `🚀 Welcome to LaunchFlow!`,
+  text: `Hi ${name}, welcome to LaunchFlow! Visit your dashboard: ${dashboardUrl}`,
+  html: `
+    <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
+      <h2 style="color:#4f46e5;">Welcome to LaunchFlow 🚀</h2>
+      <p>Hi <strong>${name}</strong>,</p>
+      <p>We're excited to have you on board! 🎉</p>
+      <div style="margin: 24px 0;">
+        <a href="${dashboardUrl}"
+           style="
+             background-color:#4f46e5;
+             color:white;
+             padding:12px 20px;
+             text-decoration:none;
+             border-radius:6px;
+             display:inline-block;
+           ">
+           Go to Dashboard
+        </a>
+      </div>
+
+      <p>Cheers,<br/>The LaunchFlow Team</p>
+    </div>
+  `,
+};
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`✅ Welcome email sent to ${email}`);
+    console.log(`Welcome email sent to ${email}`);
   } catch (error) {
-    console.error("❌ Failed to send welcome email:", error);
+    console.error("Failed to send welcome email:", error);
     throw error;
   }
 };
@@ -163,9 +187,9 @@ export const executeSendInviteEmail = async ({
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`✅ Invite email sent to ${email}`);
+    console.log(`Invite email sent to ${email}`);
   } catch (error) {
-    console.error("❌ Failed to send invite email:", error);
+    console.error("Failed to send invite email:", error);
     throw error;
   }
 };

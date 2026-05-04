@@ -17,7 +17,7 @@ router.get(
   "/workspaces/:workspaceId/members",
   requireAuth,
   trackDevice,
-  requireWorkspaceRole("OWNER", "ADMIN", "MANAGER"),
+  requireWorkspaceRole("OWNER", "ADMIN", "MANAGER", "MEMBER"),
   getWorkspaceMembersController
 );
 

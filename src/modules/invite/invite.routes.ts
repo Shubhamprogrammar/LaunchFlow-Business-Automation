@@ -25,6 +25,7 @@ router.get(
   "/:workspaceId",
   requireAuth,
   trackDevice,
+  requireWorkspaceRole("OWNER", "ADMIN", "MANAGER", "MEMBER"),
   getWorkspaceInvitesController
 );
 
