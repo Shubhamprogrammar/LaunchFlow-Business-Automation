@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import Stripe from "stripe";
 import { stripe } from "../../config/stripe";
 import { prisma } from "../../config/prisma";
 
@@ -9,7 +8,7 @@ export const stripeWebhookController = async (
 ) => {
   const sig = req.headers["stripe-signature"] as string;
 
-  let event: Stripe.Event;
+  let event: any;
 
   try {
     event = stripe.webhooks.constructEvent(
@@ -22,7 +21,7 @@ export const stripeWebhookController = async (
   }
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
+    const session = event.data.object as any;
 
     const workspaceId = session.metadata?.workspaceId!;
     const plan = session.metadata?.plan as
@@ -53,7 +52,7 @@ export const stripeWebhookController = async (
   }
 
   if (event.type === "customer.subscription.deleted") {
-    const sub = event.data.object as Stripe.Subscription;
+    const sub = event.data.object as any;
 
     await prisma.subscription.updateMany({
       where: {
