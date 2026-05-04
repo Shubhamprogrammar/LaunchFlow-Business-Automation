@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { env } from "../config/env";
+import { addVerificationEmailJob, addPasswordResetEmailJob } from "../jobs/email.jobs";
 
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
@@ -11,7 +12,31 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const sendVerificationEmail = async ({
+/**
+ * Public function to queue verification email
+ */
+export const sendVerificationEmail = async (data: {
+  email: string;
+  url: string;
+  token: string;
+}) => {
+  await addVerificationEmailJob(data);
+};
+
+/**
+ * Public function to queue password reset email
+ */
+export const sendPasswordResetEmail = async (data: {
+  email: string;
+  url: string;
+}) => {
+  await addPasswordResetEmailJob(data);
+};
+
+/**
+ * Internal function to actually send verification email (used by worker)
+ */
+export const executeSendVerificationEmail = async ({
   email,
   url,
   token,
@@ -46,10 +71,14 @@ export const sendVerificationEmail = async ({
     if (env.NODE_ENV === "development") {
       console.log("DEV: Verification URL:", url);
     }
+    throw error; // Rethrow so the worker knows it failed
   }
 };
 
-export const sendPasswordResetEmail = async ({
+/**
+ * Internal function to actually send password reset email (used by worker)
+ */
+export const executeSendPasswordResetEmail = async ({
   email,
   url,
 }: {
@@ -83,5 +112,60 @@ export const sendPasswordResetEmail = async ({
     if (env.NODE_ENV === "development") {
       console.log("DEV: Password Reset URL:", url);
     }
+    throw error; // Rethrow so the worker knows it failed
+  }
+};
+
+/**
+ * Internal function to actually send welcome email (used by worker)
+ */
+export const executeSendWelcomeEmail = async ({
+  email,
+  name,
+}: {
+  email: string;
+  name: string;
+}) => {
+  const mailOptions = {
+    from: "LaunchFlow <no-reply@launchflow.com>",
+    to: email,
+    subject: "Welcome to LaunchFlow 🚀",
+    text: `Hi ${name}, welcome aboard!`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Welcome email sent to ${email}`);
+  } catch (error) {
+    console.error("❌ Failed to send welcome email:", error);
+    throw error;
+  }
+};
+
+/**
+ * Internal function to actually send invite email (used by worker)
+ */
+export const executeSendInviteEmail = async ({
+  email,
+  workspaceName,
+  inviteLink,
+}: {
+  email: string;
+  workspaceName: string;
+  inviteLink: string;
+}) => {
+  const mailOptions = {
+    from: "LaunchFlow <no-reply@launchflow.com>",
+    to: email,
+    subject: "You're invited to join a workspace",
+    text: `You were invited to ${workspaceName}. Join here: ${inviteLink}`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Invite email sent to ${email}`);
+  } catch (error) {
+    console.error("❌ Failed to send invite email:", error);
+    throw error;
   }
 };

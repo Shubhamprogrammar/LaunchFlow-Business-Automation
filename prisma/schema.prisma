@@ -7,9 +7,244 @@ datasource db {
   provider = "postgresql"
 }
 
-// ==============================
-// ENUMS
-// ==============================
+model User {
+  id            String         @id @default(cuid())
+  name          String?
+  email         String         @unique
+  status        UserStatus     @default(ACTIVE)
+  emailVerified Boolean        @default(false)
+  lastLoginAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  image         String?
+  accounts      Account[]
+  apiKeys       ApiKey[]
+  auditLogs     AuditLog[]     @relation("AuditActor")
+  devices       Device[]
+  uploads       FileUpload[]
+  invitesSent   Invite[]       @relation("UserInvitesSent")
+  memberships   Membership[]
+  notifications Notification[]
+  sessions      Session[]
+
+  @@index([email])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  token     String   @unique
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  password              String?
+  accessToken           String?
+  refreshToken          String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  accountId             String
+  providerId            String
+  accessTokenExpiresAt  DateTime?
+  idToken               String?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model Workspace {
+  id            String            @id @default(cuid())
+  name          String
+  slug          String            @unique
+  logoUrl       String?
+  plan          WorkspacePlan     @default(FREE)
+  ownerId       String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  apiKeys       ApiKey[]
+  auditLogs     AuditLog[]
+  uploads       FileUpload[]
+  invites       Invite[]
+  jobs          Job[]
+  memberships   Membership[]
+  notifications Notification[]
+  subscriptions Subscription[]
+  webhooks      WebhookEndpoint[]
+
+  @@index([slug])
+}
+
+model Membership {
+  id          String         @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        MembershipRole @default(MEMBER)
+  createdAt   DateTime       @default(now())
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model Invite {
+  id          String         @id @default(cuid())
+  email       String
+  workspaceId String
+  role        MembershipRole @default(MEMBER)
+  token       String         @unique
+  status      InviteStatus   @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime       @default(now())
+  invitedById String
+  invitedBy   User           @relation("UserInvitesSent", fields: [invitedById], references: [id], onDelete: Cascade)
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([invitedById])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  workspaceId          String
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  plan                 WorkspacePlan      @default(FREE)
+  status               SubscriptionStatus @default(TRIALING)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  type        NotificationType @default(INFO)
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  eventType   String?
+  metadata    Json?
+  workspaceId String?
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  actorId     String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  actor       User?     @relation("AuditActor", fields: [actorId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model WebhookEndpoint {
+  id          String    @id @default(cuid())
+  workspaceId String
+  url         String
+  secret      String
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  name        String
+  keyHash     String    @unique
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  prefix      String
+  revoked     Boolean   @default(false)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model FileUpload {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  fileName    String
+  fileUrl     String
+  mimeType    String?
+  size        Int
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model Device {
+  id         String    @id @default(cuid())
+  userId     String
+  deviceName String
+  browser    String?
+  os         String?
+  ipAddress  String?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  workspaceId String
+  type        String
+  status      JobStatus @default(PENDING)
+  payload     Json?
+  error       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
 
 enum UserStatus {
   ACTIVE
@@ -58,268 +293,4 @@ enum NotificationType {
   SUCCESS
   WARNING
   ERROR
-}
-
-// ==============================
-// BETTER AUTH MODELS
-// ==============================
-
-model User {
-  id            String     @id @default(cuid())
-  name          String?
-  email         String     @unique
-  emailVerified Boolean    @default(false)
-  image         String?
-  status        UserStatus @default(ACTIVE)
-  lastLoginAt   DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  sessions Session[]
-  accounts Account[]
-
-  memberships   Membership[]
-  notifications Notification[]
-  invitesSent   Invite[]       @relation("UserInvitesSent")
-  auditLogs     AuditLog[]     @relation("AuditActor")
-  apiKeys       ApiKey[]
-  uploads       FileUpload[]
-  devices       Device[]
-
-  @@index([email])
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model Account {
-  id                    String   @id @default(cuid())
-  userId                String
-  providerId            String
-  accountId             String
-  password              String?
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model Verification {
-  id         String   @id @default(cuid())
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([identifier])
-}
-
-//
-// ==============================
-// LAUNCHFLOW BUSINESS MODELS
-// ==============================
-//
-
-model Workspace {
-  id        String        @id @default(cuid())
-  name      String
-  slug      String        @unique
-  logoUrl   String?
-  plan      WorkspacePlan @default(FREE)
-  ownerId   String
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  memberships   Membership[]
-  invites       Invite[]
-  subscriptions Subscription[]
-  auditLogs     AuditLog[]
-  webhooks      WebhookEndpoint[]
-  apiKeys       ApiKey[]
-  uploads       FileUpload[]
-  jobs          Job[]
-  notifications Notification[]
-
-  @@index([slug])
-}
-
-model Membership {
-  id          String         @id @default(cuid())
-  userId      String
-  workspaceId String
-  role        MembershipRole @default(MEMBER)
-  createdAt   DateTime       @default(now())
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, workspaceId])
-  @@index([workspaceId])
-}
-
-model Invite {
-  id          String         @id @default(cuid())
-  email       String
-  workspaceId String
-  invitedById String
-  role        MembershipRole @default(MEMBER)
-  token       String         @unique
-  status      InviteStatus   @default(PENDING)
-  expiresAt   DateTime
-  createdAt   DateTime       @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  invitedBy User      @relation("UserInvitesSent", fields: [invitedById], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId])
-  @@index([invitedById])
-}
-
-model Subscription {
-  id                   String             @id @default(cuid())
-  workspaceId          String
-  stripeCustomerId     String?            @unique
-  stripeSubscriptionId String?            @unique
-  plan                 WorkspacePlan      @default(FREE)
-  status               SubscriptionStatus @default(TRIALING)
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId])
-}
-
-model Notification {
-  id          String           @id @default(cuid())
-  userId      String
-  workspaceId String?
-  title       String
-  message     String
-  type        NotificationType @default(INFO)
-  eventType   String?
-  metadata    Json?
-  read        Boolean          @default(false)
-  createdAt   DateTime         @default(now())
-
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([workspaceId])
-}
-
-model AuditLog {
-  id          String   @id @default(cuid())
-  workspaceId String
-  actorId     String?
-  action      String
-  entityType  String
-  entityId    String?
-  metadata    Json?
-  createdAt   DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  actor     User?     @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
-
-  @@index([workspaceId])
-}
-
-model WebhookEndpoint {
-  id          String   @id @default(cuid())
-  workspaceId String
-  url         String
-  secret      String
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId])
-}
-
-model ApiKey {
-  id          String    @id @default(cuid())
-  userId      String
-  workspaceId String
-  name        String
-  keyHash     String    @unique
-  prefix      String
-  revoked     Boolean   @default(false)
-  lastUsedAt  DateTime?
-  createdAt   DateTime  @default(now())
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId])
-}
-
-model FileUpload {
-  id          String   @id @default(cuid())
-  userId      String
-  workspaceId String
-  fileName    String
-  fileUrl     String
-  mimeType    String?
-  size        Int
-  createdAt   DateTime @default(now())
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId])
-}
-
-model Device {
-  id         String    @id @default(cuid())
-  userId     String
-  deviceName String
-  browser    String?
-  os         String?
-  ipAddress  String?
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model Job {
-  id          String    @id @default(cuid())
-  workspaceId String
-  type        String
-  status      JobStatus @default(PENDING)
-  payload     Json?
-  error       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId])
 }

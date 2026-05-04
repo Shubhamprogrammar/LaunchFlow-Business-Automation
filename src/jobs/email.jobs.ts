@@ -23,3 +23,30 @@ export const addInviteEmailJob = async (data: {
     delay: 1000,
   });
 };
+
+export const addVerificationEmailJob = async (data: {
+  email: string;
+  url: string;
+  token: string;
+}) => {
+  await emailQueue.add("verification-email", data, {
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 2000,
+    },
+  });
+};
+
+export const addPasswordResetEmailJob = async (data: {
+  email: string;
+  url: string;
+}) => {
+  await emailQueue.add("password-reset-email", data, {
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 2000,
+    },
+  });
+};
