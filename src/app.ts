@@ -24,6 +24,8 @@ import { env } from "./config/env";
 
 const app = express();
 
+app.set("trust proxy", true);
+
 // Security
 app.use(helmet());
 

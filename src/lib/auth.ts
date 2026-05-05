@@ -52,10 +52,10 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     cookieCache: {
       enabled: true
-    } 
+    }
   },
 
-  baseURL: env.BETTER_AUTH_URL.replace(/\/+$/, "") + "/api/auth",
+  baseURL: env.BETTER_AUTH_URL.replace(/\/+$/, ""),
   basePath: "/api/auth",
 
   trustedOrigins: [
@@ -66,7 +66,7 @@ export const auth = betterAuth({
 
   events: {
     emailVerification: {
-      verified: async ({ user }:any) => {
+      verified: async ({ user }: any) => {
         await handleUserCreated(user);
       },
     },
