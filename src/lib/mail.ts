@@ -1,6 +1,12 @@
 import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 import { env } from "../config/env";
 import { addVerificationEmailJob, addPasswordResetEmailJob } from "../jobs/email.jobs";
+
+// Initialize SendGrid if API key is present
+if (env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(env.SENDGRID_API_KEY);
+}
 
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
@@ -11,8 +17,46 @@ const transporter = nodemailer.createTransport({
     pass: env.SMTP_PASS,
   },
 });
+
 const APP_URL = env.FRONTEND_URL;
 const dashboardUrl = `${APP_URL}/dashboard`;
+
+/**
+ * Unified email sender that switches between SendGrid (production) and Nodemailer (development)
+ */
+const sendEmail = async (options: {
+  to: string;
+  from?: string;
+  subject: string;
+  text?: string;
+  html: string;
+}) => {
+  const from = options.from || "LaunchFlow <no-reply@launchflow.com>";
+  
+  if (env.NODE_ENV === "production" && env.SENDGRID_API_KEY) {
+    try {
+      await sgMail.send({
+        to: options.to,
+        from: from,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      });
+      return;
+    } catch (error) {
+      console.error("SendGrid failed, falling back to SMTP if available", error);
+    }
+  }
+
+  // Fallback or default to Nodemailer
+  await transporter.sendMail({
+    from: from,
+    to: options.to,
+    subject: options.subject,
+    text: options.text,
+    html: options.html,
+  });
+};
 
 /**
  * Public function to queue verification email
@@ -66,7 +110,7 @@ export const executeSendVerificationEmail = async ({
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sendEmail(mailOptions);
     console.log(`Verification email sent to ${email}`);
   } catch (error) {
     console.error("Failed to send verification email:", error);
@@ -107,7 +151,7 @@ export const executeSendPasswordResetEmail = async ({
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sendEmail(mailOptions);
     console.log(`Password reset email sent to ${email}`);
   } catch (error) {
     console.error("Failed to send password reset email:", error);
@@ -158,7 +202,7 @@ const mailOptions = {
 };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sendEmail(mailOptions);
     console.log(`Welcome email sent to ${email}`);
   } catch (error) {
     console.error("Failed to send welcome email:", error);
@@ -183,10 +227,32 @@ export const executeSendInviteEmail = async ({
     to: email,
     subject: "You're invited to join a workspace",
     text: `You were invited to ${workspaceName}. Join here: ${inviteLink}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
+        <h2 style="color:#4f46e5;">You're invited to join a workspace! 🚀</h2>
+        <p>Hi <strong>${workspaceName}</strong>,</p>
+        <p>We're excited to have you on board! 🎉</p>
+        <div style="margin: 24px 0;">
+          <a href="${inviteLink}"
+             style="
+               background-color:#4f46e5;
+               color:white;
+               padding:12px 20px;
+               text-decoration:none;
+               border-radius:6px;
+               display:inline-block;
+             ">
+             Join Workspace
+          </a>
+        </div>
+
+        <p>Cheers,<br/>The LaunchFlow Team</p>
+      </div>
+    `,
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sendEmail(mailOptions);
     console.log(`Invite email sent to ${email}`);
   } catch (error) {
     console.error("Failed to send invite email:", error);

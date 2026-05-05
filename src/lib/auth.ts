@@ -48,6 +48,14 @@ export const auth = betterAuth({
     openAPI(),
   ],
 
+  advanced: {
+    useSecureCookies: true,
+    defaultCookieAttributes: {
+      sameSite: "none",
+      secure: true,
+    },
+  },
+
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     cookieCache: {
