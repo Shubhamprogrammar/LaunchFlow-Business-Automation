@@ -1,4 +1,5 @@
 import { Worker } from "bullmq";
+console.log("🛠️ Email Worker file loaded...");
 import { redis } from "../config/redis";
 import { 
   executeSendVerificationEmail, 
@@ -10,6 +11,7 @@ import {
 export const emailWorker = new Worker(
   "email-queue",
   async (job) => {
+    console.log(`📥 Worker picking up job: ${job.name}`);
     switch (job.name) {
       case "welcome-email":
         await executeSendWelcomeEmail(job.data);

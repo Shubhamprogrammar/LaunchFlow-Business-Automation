@@ -4,6 +4,7 @@ export const addWelcomeEmailJob = async (data: {
   email: string;
   name: string;
 }) => {
+  console.log(`📤 Adding welcome-email job for: ${data.email}`);
   await emailQueue.add("welcome-email", data, {
     attempts: 3,
     backoff: {
@@ -29,6 +30,7 @@ export const addVerificationEmailJob = async (data: {
   url: string;
   token: string;
 }) => {
+  console.log(`📤 Adding verification-email job for: ${data.email}`);
   await emailQueue.add("verification-email", data, {
     attempts: 3,
     backoff: {
