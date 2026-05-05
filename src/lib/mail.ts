@@ -11,6 +11,12 @@ const mailjet = env.MAILJET_API_KEY && env.MAILJET_API_SECRET
     })
   : null;
 
+if (mailjet) {
+  console.log("✅ Mailjet initialized for production");
+} else if (env.NODE_ENV === "production") {
+  console.warn("⚠️ WARNING: Running in production but MAILJET_API_KEY or MAILJET_API_SECRET is missing!");
+}
+
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
   port: env.SMTP_PORT,
@@ -40,9 +46,11 @@ const sendEmail = async (options: {
   const fromName = fromMatch ? fromMatch[1].trim() : "LaunchFlow";
   const fromEmail = fromMatch ? fromMatch[2].trim() : "no-reply@launchflow.com";
 
+  console.log(`📧 Attempting to send email to ${options.to} via ${env.NODE_ENV === "production" && mailjet ? "Mailjet" : "SMTP"}`);
+
   if (env.NODE_ENV === "production" && mailjet) {
     try {
-      await mailjet.post("send", { version: "v3.1" }).request({
+      const result = await mailjet.post("send", { version: "v3.1" }).request({
         Messages: [
           {
             From: {
@@ -60,20 +68,28 @@ const sendEmail = async (options: {
           },
         ],
       });
+      console.log(`✅ Mailjet: Email sent successfully to ${options.to}`);
       return;
-    } catch (error) {
-      console.error("Mailjet failed, falling back to SMTP if available", error);
+    } catch (error: any) {
+      console.error("❌ Mailjet Error:", error.response?.data || error.message);
+      console.log("🔄 Falling back to SMTP...");
     }
   }
 
   // Fallback or default to Nodemailer
-  await transporter.sendMail({
-    from: from,
-    to: options.to,
-    subject: options.subject,
-    text: options.text,
-    html: options.html,
-  });
+  try {
+    await transporter.sendMail({
+      from: from,
+      to: options.to,
+      subject: options.subject,
+      text: options.text,
+      html: options.html,
+    });
+    console.log(`✅ SMTP: Email sent successfully to ${options.to}`);
+  } catch (error) {
+    console.error("❌ SMTP Error:", error);
+    throw error;
+  }
 };
 
 /**
