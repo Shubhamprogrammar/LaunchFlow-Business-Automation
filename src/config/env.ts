@@ -38,7 +38,8 @@ const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_BUCKET_NAME: z.string().optional(),
 
-  SENDGRID_API_KEY: z.string().optional(),
+  MAILJET_API_KEY: z.string().optional(),
+  MAILJET_API_SECRET: z.string().optional(),
   LOG_LEVEL: z.string().default("info"),
 });
 

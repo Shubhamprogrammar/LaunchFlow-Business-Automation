@@ -1,12 +1,15 @@
 import nodemailer from "nodemailer";
-import sgMail from "@sendgrid/mail";
+import Mailjet from "node-mailjet";
 import { env } from "../config/env";
 import { addVerificationEmailJob, addPasswordResetEmailJob } from "../jobs/email.jobs";
 
-// Initialize SendGrid if API key is present
-if (env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
-}
+// Initialize Mailjet if API key and secret are present
+const mailjet = env.MAILJET_API_KEY && env.MAILJET_API_SECRET
+  ? new Mailjet({
+      apiKey: env.MAILJET_API_KEY,
+      apiSecret: env.MAILJET_API_SECRET
+    })
+  : null;
 
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
@@ -22,7 +25,7 @@ const APP_URL = env.FRONTEND_URL;
 const dashboardUrl = `${APP_URL}/dashboard`;
 
 /**
- * Unified email sender that switches between SendGrid (production) and Nodemailer (development)
+ * Unified email sender that switches between Mailjet (production) and Nodemailer (development)
  */
 const sendEmail = async (options: {
   to: string;
@@ -32,19 +35,34 @@ const sendEmail = async (options: {
   html: string;
 }) => {
   const from = options.from || "LaunchFlow <no-reply@launchflow.com>";
-  
-  if (env.NODE_ENV === "production" && env.SENDGRID_API_KEY) {
+  // Extract name and email from "Name <email>" format if present
+  const fromMatch = from.match(/(.*)<(.*)>/);
+  const fromName = fromMatch ? fromMatch[1].trim() : "LaunchFlow";
+  const fromEmail = fromMatch ? fromMatch[2].trim() : "no-reply@launchflow.com";
+
+  if (env.NODE_ENV === "production" && mailjet) {
     try {
-      await sgMail.send({
-        to: options.to,
-        from: from,
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
+      await mailjet.post("send", { version: "v3.1" }).request({
+        Messages: [
+          {
+            From: {
+              Email: fromEmail,
+              Name: fromName,
+            },
+            To: [
+              {
+                Email: options.to,
+              },
+            ],
+            Subject: options.subject,
+            TextPart: options.text,
+            HTMLPart: options.html,
+          },
+        ],
       });
       return;
     } catch (error) {
-      console.error("SendGrid failed, falling back to SMTP if available", error);
+      console.error("Mailjet failed, falling back to SMTP if available", error);
     }
   }
 
