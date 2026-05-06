@@ -12,7 +12,7 @@ const mailjet = env.MAILJET_API_KEY && env.MAILJET_API_SECRET
   : null;
 
 if (mailjet) {
-  console.log("✅ Mailjet initialized");
+  console.log("✅ Mailjet initialized for production");
 } else if (env.NODE_ENV === "production") {
   console.warn("⚠️ WARNING: Running in production but MAILJET_API_KEY or MAILJET_API_SECRET is missing!");
 }
@@ -29,9 +29,13 @@ const transporter = nodemailer.createTransport({
 
 const APP_URL = env.FRONTEND_URL;
 const dashboardUrl = `${APP_URL}/dashboard`;
+const defaultFrom = env.MAIL_FROM || env.SMTP_USER || "no-reply@launchflow.com";
+const defaultFromAddress = defaultFrom.includes("<")
+  ? defaultFrom
+  : `LaunchFlow <${defaultFrom}>`;
 
 /**
- * Unified email sender that prefers Mailjet when configured and falls back to SMTP.
+ * Unified email sender that switches between Mailjet (production) and Nodemailer (development).
  */
 const sendEmail = async (options: {
   to: string;
@@ -40,15 +44,15 @@ const sendEmail = async (options: {
   text?: string;
   html: string;
 }) => {
-  const from = options.from || "LaunchFlow <no-reply@launchflow.com>";
+  const from = options.from || defaultFromAddress;
   // Extract name and email from "Name <email>" format if present
   const fromMatch = from.match(/(.*)<(.*)>/);
   const fromName = fromMatch ? fromMatch[1].trim() : "LaunchFlow";
   const fromEmail = fromMatch ? fromMatch[2].trim() : "no-reply@launchflow.com";
 
-  console.log(`📧 Attempting to send email to ${options.to} via ${mailjet ? "Mailjet" : "SMTP"}`);
+  console.log(`📧 Attempting to send email to ${options.to} via ${env.NODE_ENV === "production" && mailjet ? "Mailjet" : "SMTP"}`);
 
-  if (mailjet) {
+  if (env.NODE_ENV === "production" && mailjet) {
     try {
       const result = await mailjet.post("send", { version: "v3.1" }).request({
         Messages: [
@@ -68,7 +72,7 @@ const sendEmail = async (options: {
           },
         ],
       });
-      console.log(`✅ Mailjet: Email sent successfully to ${options.to}`);
+      console.log(`Mailjet: Email sent successfully to ${options.to}`);
       return;
     } catch (error: any) {
       console.error("❌ Mailjet Error:", error.response?.data || error.message);
@@ -100,6 +104,11 @@ export const sendVerificationEmail = async (data: {
   url: string;
   token: string;
 }) => {
+  if (env.NODE_ENV === "development") {
+    await executeSendVerificationEmail(data);
+    return;
+  }
+
   try {
     await addVerificationEmailJob(data);
   } catch (error) {
@@ -118,6 +127,11 @@ export const sendPasswordResetEmail = async (data: {
   email: string;
   url: string;
 }) => {
+  if (env.NODE_ENV === "development") {
+    await executeSendPasswordResetEmail(data);
+    return;
+  }
+
   try {
     await addPasswordResetEmailJob(data);
   } catch (error) {
@@ -142,7 +156,7 @@ export const executeSendVerificationEmail = async ({
   token: string;
 }) => {
   const mailOptions = {
-    from: "LaunchFlow <no-reply@launchflow.com>",
+    from: defaultFromAddress,
     to: email,
     subject: "Verify your email address",
     html: `
@@ -182,7 +196,7 @@ export const executeSendPasswordResetEmail = async ({
   url: string;
 }) => {
   const mailOptions = {
-    from: "LaunchFlow <no-reply@launchflow.com>",
+    from: defaultFromAddress,
     to: email,
     subject: "Reset your password",
     html: `
@@ -223,7 +237,7 @@ export const executeSendWelcomeEmail = async ({
   name: string;
 }) => {
 const mailOptions = {
-  from: "LaunchFlow <no-reply@launchflow.com>",
+  from: defaultFromAddress,
   to: email,
   subject: `🚀 Welcome to LaunchFlow!`,
   text: `Hi ${name}, welcome to LaunchFlow! Visit your dashboard: ${dashboardUrl}`,
@@ -273,7 +287,7 @@ export const executeSendInviteEmail = async ({
   inviteLink: string;
 }) => {
   const mailOptions = {
-    from: "LaunchFlow <no-reply@launchflow.com>",
+    from: defaultFromAddress,
     to: email,
     subject: "You're invited to join a workspace",
     text: `You were invited to ${workspaceName}. Join here: ${inviteLink}`,
