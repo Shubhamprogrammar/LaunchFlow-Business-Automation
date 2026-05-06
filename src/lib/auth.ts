@@ -6,6 +6,10 @@ import { handleUserCreated } from "./auth.events";
 import { openAPI } from "better-auth/plugins";
 import { sendVerificationEmail, sendPasswordResetEmail } from "./mail";
 
+const authBaseURL = env.BETTER_AUTH_URL.replace(/\/+$/, "");
+const useSecureCookies =
+  env.NODE_ENV === "production" || authBaseURL.startsWith("https://");
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
@@ -49,10 +53,10 @@ export const auth = betterAuth({
   ],
 
   advanced: {
-    useSecureCookies: true,
+    useSecureCookies,
     defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
+      sameSite: useSecureCookies ? "none" : "lax",
+      secure: useSecureCookies,
     },
   },
 
@@ -63,7 +67,7 @@ export const auth = betterAuth({
     }
   },
 
-  baseURL: env.BETTER_AUTH_URL.replace(/\/+$/, ""),
+  baseURL: authBaseURL,
   basePath: "/api/auth",
 
   trustedOrigins: [

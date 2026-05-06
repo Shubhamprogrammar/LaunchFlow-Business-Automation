@@ -12,7 +12,7 @@ const mailjet = env.MAILJET_API_KEY && env.MAILJET_API_SECRET
   : null;
 
 if (mailjet) {
-  console.log("✅ Mailjet initialized for production");
+  console.log("✅ Mailjet initialized");
 } else if (env.NODE_ENV === "production") {
   console.warn("⚠️ WARNING: Running in production but MAILJET_API_KEY or MAILJET_API_SECRET is missing!");
 }
@@ -31,7 +31,7 @@ const APP_URL = env.FRONTEND_URL;
 const dashboardUrl = `${APP_URL}/dashboard`;
 
 /**
- * Unified email sender that switches between Mailjet (production) and Nodemailer (development)
+ * Unified email sender that prefers Mailjet when configured and falls back to SMTP.
  */
 const sendEmail = async (options: {
   to: string;
@@ -46,9 +46,9 @@ const sendEmail = async (options: {
   const fromName = fromMatch ? fromMatch[1].trim() : "LaunchFlow";
   const fromEmail = fromMatch ? fromMatch[2].trim() : "no-reply@launchflow.com";
 
-  console.log(`📧 Attempting to send email to ${options.to} via ${env.NODE_ENV === "production" && mailjet ? "Mailjet" : "SMTP"}`);
+  console.log(`📧 Attempting to send email to ${options.to} via ${mailjet ? "Mailjet" : "SMTP"}`);
 
-  if (env.NODE_ENV === "production" && mailjet) {
+  if (mailjet) {
     try {
       const result = await mailjet.post("send", { version: "v3.1" }).request({
         Messages: [
@@ -100,7 +100,15 @@ export const sendVerificationEmail = async (data: {
   url: string;
   token: string;
 }) => {
-  await addVerificationEmailJob(data);
+  try {
+    await addVerificationEmailJob(data);
+  } catch (error) {
+    console.error("Failed to queue verification email:", error);
+    if (env.NODE_ENV === "production") {
+      throw error;
+    }
+    await executeSendVerificationEmail(data);
+  }
 };
 
 /**
@@ -110,7 +118,15 @@ export const sendPasswordResetEmail = async (data: {
   email: string;
   url: string;
 }) => {
-  await addPasswordResetEmailJob(data);
+  try {
+    await addPasswordResetEmailJob(data);
+  } catch (error) {
+    console.error("Failed to queue password reset email:", error);
+    if (env.NODE_ENV === "production") {
+      throw error;
+    }
+    await executeSendPasswordResetEmail(data);
+  }
 };
 
 /**

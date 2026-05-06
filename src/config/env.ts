@@ -40,7 +40,15 @@ const envSchema = z.object({
 
   MAILJET_API_KEY: z.string().optional(),
   MAILJET_API_SECRET: z.string().optional(),
+  MAILJET_API: z.string().optional(),
+  MAILJET_SECRET: z.string().optional(),
   LOG_LEVEL: z.string().default("info"),
 });
 
-export const env = envSchema.parse(process.env);
+const parsedEnv = envSchema.parse(process.env);
+
+export const env = {
+  ...parsedEnv,
+  MAILJET_API_KEY: parsedEnv.MAILJET_API_KEY || parsedEnv.MAILJET_API,
+  MAILJET_API_SECRET: parsedEnv.MAILJET_API_SECRET || parsedEnv.MAILJET_SECRET,
+};
