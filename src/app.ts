@@ -26,29 +26,12 @@ const app = express();
 
 app.set("trust proxy", true);
 
-const normalizeURL = (url?: string) => url?.replace(/\/+$/, "");
-const allowedOrigins = Array.from(
-  new Set(
-    [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      env.FRONTEND_URL,
-      env.BETTER_AUTH_URL,
-      env.PUBLIC_AUTH_URL,
-      env.VERCEL_URL ? `https://${env.VERCEL_URL}` : undefined,
-      ...(env.CORS_ORIGINS?.split(",") ?? []),
-    ]
-      .map((origin) => normalizeURL(origin?.trim()))
-      .filter(Boolean) as string[]
-  )
-);
-
 // Security
 app.use(helmet());
 
 // CORS
 app.use(cors({
-  origin: allowedOrigins,
+  origin: ['http://localhost:3000', 'http://localhost:3001', env.FRONTEND_URL].filter(Boolean),
   credentials: true
 }));
 
