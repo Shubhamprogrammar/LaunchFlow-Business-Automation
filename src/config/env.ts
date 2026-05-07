@@ -10,8 +10,11 @@ const envSchema = z.object({
 
   BETTER_AUTH_URL: z.string().url(),
   BETTER_AUTH_SECRET: z.string().min(16),
+  PUBLIC_AUTH_URL: z.string().url().optional(),
 
   FRONTEND_URL: z.string().url(),
+  CORS_ORIGINS: z.string().optional(),
+  VERCEL_URL: z.string().optional(),
 
   REDIS_URL: z.string().min(1),
 
